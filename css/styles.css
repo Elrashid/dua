@@ -227,3 +227,19 @@
     cursor:pointer; font-family:system-ui,sans-serif; background:#a9711f; color:#fff; }
   .btn-install:active { transform:scale(.98); }
   body.dark .btn-install { background:#b9831f; }
+
+  /* ===== التحقّق من التحديثات (PWA update) ===== */
+  .update-box { font-family:system-ui,sans-serif; }
+  .update-line { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .update-line span { font-size:14px; font-weight:600; color:#14532d; }
+  .update-line .bhash { color:#9aa39c; font-weight:400; font-size:12px; direction:ltr; }
+  .btn-update-check { border:1px solid #cdd8cf; background:transparent; color:#14532d; border-radius:10px;
+    padding:8px 12px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .btn-update-check:disabled { opacity:.6; cursor:default; }
+  .btn-update-apply { width:100%; margin-top:10px; border:none; border-radius:10px; padding:12px; font-size:15px;
+    font-weight:700; cursor:pointer; font-family:inherit; background:#14532d; color:#fff; }
+  .btn-update-apply:active { transform:scale(.98); }
+  .update-msg { margin-top:8px; font-size:13px; font-weight:600; color:#1c6e3c; text-align:center; }
+  body.dark .update-line span { color:#9fe0b4; }
+  body.dark .btn-update-check { background:#0b1a12; color:#9fe0b4; border-color:#2a4a36; }
+  body.dark .update-msg { color:#7fd49b; }

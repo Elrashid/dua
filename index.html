@@ -4,11 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>دعاء الميت ومناسك العمرة — الإصدار 1.1</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/fonts.css?v=__BUILD_HASH__">
+<link rel="stylesheet" href="css/styles.css?v=__BUILD_HASH__">
+<link rel="manifest" href="manifest.webmanifest?v=__BUILD_HASH__">
 <meta name="theme-color" content="#14532d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -97,7 +95,19 @@
       <div class="cat-total">إجمالي الشرائح: {{ ar(slides.length) }}</div>
     </div>
     <button class="wiz-help-btn" @click="openWizard()">؟ شرح التطبيق</button>
-    <p class="hint">إن تُرك الاسم فارغاً يُكتفى بالضمير (له/لها). الطباعة تُخرج الدعاء كاملاً باسم المتوفّى لمشاركته.</p>
+    <hr style="border:none;border-top:1px solid #eef2ec;margin:14px 0">
+    <div class="update-box">
+      <div class="update-line">
+        <span>الإصدار {{ version }} <small class="bhash">({{ shortHash }})</small></span>
+        <button class="btn-update-check" @click="checkUpdate()" :disabled="checkingUpdate">
+          {{ checkingUpdate ? '... جارٍ الفحص' : '↻ تحقّق من التحديثات' }}
+        </button>
+      </div>
+      <button class="btn-update-apply" v-show="updateReady" @click="applyUpdate()">🔄 تحديثٌ متوفّر — اضغط للتحديث الآن</button>
+      <div class="update-msg" v-show="upToDate">✓ أنت على أحدث إصدار</div>
+      <div class="update-msg" v-show="offlineReady">✓ جاهزٌ للعمل دون إنترنت</div>
+    </div>
+    <p class="hint">إن تُرك الاسم فارغاً يُكتفى بالضمير (له/لها). الطباعة تُخرج الدعاء كاملاً باسم المتوفّى لمشاركته. يعمل التطبيق دون إنترنت بالكامل بعد أوّل فتح.</p>
   </div>
 
   <!-- شريط الأدوات السفلي (تبويب الدعاء) -->
@@ -260,7 +270,7 @@
     <div class="p-foot">اللهم تقبّل واغفر لموتانا وموتى المسلمين</div>
   </div>
 </div>
-<script src="js/vendor/vue.global.prod.js"></script>
-<script type="module" src="js/app.js"></script>
+<script src="js/vendor/vue.global.prod.js?v=__BUILD_HASH__"></script>
+<script type="module" src="js/app.js?v=__BUILD_HASH__"></script>
 </body>
 </html>

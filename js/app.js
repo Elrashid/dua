@@ -1,5 +1,8 @@
-import { DATA } from './data.js';
-import { CATS } from './cats.js';
+import { DATA } from './data.js?v=__BUILD_HASH__';
+import { CATS } from './cats.js?v=__BUILD_HASH__';
+
+// Build identifier — replaced with the git hash at deploy time (see build.mjs).
+const BUILD_HASH = '__BUILD_HASH__';
 
 // Vue is provided as a global by js/vendor/vue.global.prod.js (loaded before this module)
 const { createApp } = Vue;
@@ -11,6 +14,7 @@ createApp({
     dark:false, wake:false, wakeSupported:('wakeLock' in navigator),
     playing:false, speed:9, playTimer:null, version:'1.1',
     canInstall:false,
+    buildHash:BUILD_HASH, updateReady:false, checkingUpdate:false, upToDate:false, offlineReady:false,
     selectedCats:[],
     catList:[{key:'child',title:'الطفل / الصغير',badge:'مأثور'},{key:'parents',title:'الوالدان',badge:'مأثور'},{key:'ill',title:'مريض / مبتلى (السرطان)',badge:'دعاء عام'},{key:'martyr',title:'الشهيد (الأصناف الخمسة)',badge:'دعاء عام'},{key:'self',title:'لنفسك (طواف/سعي)',badge:'مأثور'}],
     showWizard:false, wizardStep:0,
@@ -55,7 +59,8 @@ createApp({
     printTitle(){ if(this.gender==='p') return 'دُعَاءٌ لِلْأَمْوَاتِ'; const fn=this.fullName; if(fn) return 'دُعَاءٌ لِـ'+(this.gender==='m'?'الْمَرْحُومِ':'الْمَرْحُومَةِ')+' '+fn;
       return this.gender==='m'?'دُعَاءُ الْمَيِّتِ':'دُعَاءُ الْمَيِّتَةِ'; },
     printItems(){ return this.slides.slice(1).map(s=>s.inner); },
-    zikr(){ return this.azkar[this.zikrIdx]; }
+    zikr(){ return this.azkar[this.zikrIdx]; },
+    shortHash(){ const h=this.buildHash||''; return (h && h!=='__BUILD'+'_HASH__') ? h.slice(0,7) : 'dev'; }
   },
   watch:{
     gender(v){ this.persist('duaaGender',v); this.keepSlide(); },
@@ -123,6 +128,26 @@ createApp({
     // تثبيت التطبيق (PWA)
     async doInstall(){ if(!this.deferredPrompt) return; this.deferredPrompt.prompt();
       try{ await this.deferredPrompt.userChoice; }catch(e){} this.deferredPrompt=null; this.canInstall=false; },
+    // التحقّق من التحديثات
+    async checkUpdate(){
+      this.upToDate=false; this.checkingUpdate=true;
+      let newer=false;
+      try{ if(this.swReg) await this.swReg.update(); }catch(e){}
+      try{
+        const r=await fetch('version.json?_='+Date.now(),{cache:'no-store'});
+        if(r.ok){ const j=await r.json(); if(j && j.hash && j.hash!==this.buildHash) newer=true; }
+      }catch(e){}
+      // a waiting worker also means a new version is ready
+      if(this.swReg && this.swReg.waiting) this.updateReady=true;
+      if(newer) this.updateReady=true;
+      this.checkingUpdate=false;
+      if(!this.updateReady){ this.upToDate=true; setTimeout(()=>{ this.upToDate=false; },4000); }
+    },
+    applyUpdate(){
+      const w=this.swReg && this.swReg.waiting;
+      if(w){ w.postMessage({type:'SKIP_WAITING'}); }   // controllerchange handler will reload
+      else { window.location.reload(); }
+    },
     // طباعة
     doPrint(){ this.showSettings=false; this.$nextTick(()=>{ setTimeout(()=>window.print(),120); }); },
     // فهرس + قفز
@@ -158,7 +183,19 @@ createApp({
     this.deferredPrompt=null;
     window.addEventListener('beforeinstallprompt',(e)=>{ e.preventDefault(); this.deferredPrompt=e; this.canInstall=true; });
     window.addEventListener('appinstalled',()=>{ this.canInstall=false; this.deferredPrompt=null; });
-    if('serviceWorker' in navigator){ navigator.serviceWorker.register(new URL('../sw.js',import.meta.url)).catch(()=>{}); }
+    if('serviceWorker' in navigator){
+      const swUrl=new URL('../sw.js?v='+encodeURIComponent(BUILD_HASH), import.meta.url);
+      navigator.serviceWorker.register(swUrl).then((reg)=>{
+        this.swReg=reg;
+        if(navigator.serviceWorker.controller) this.offlineReady=true;
+        if(reg.waiting && navigator.serviceWorker.controller) this.updateReady=true;
+        reg.addEventListener('updatefound',()=>{ const nw=reg.installing; if(!nw) return;
+          nw.addEventListener('statechange',()=>{ if(nw.state==='installed' && navigator.serviceWorker.controller) this.updateReady=true;
+            if(nw.state==='activated') this.offlineReady=true; }); });
+      }).catch(()=>{});
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        if(this._reloading) return; this._reloading=true; window.location.reload(); });
+    }
     this.loadAll();
     try{ if(!localStorage.getItem('tutorialDone')) this.showWizard=true; }catch(e){ this.showWizard=true; }
     document.documentElement.style.setProperty('--scale',this.scale);

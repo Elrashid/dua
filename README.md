@@ -19,9 +19,13 @@ turned into an installable PWA, and wired up for GitHub Pages deployment.
 ```
 index.html                     # هيكل الصفحة (HTML shell)
 manifest.webmanifest           # بيان تطبيق الويب (PWA manifest)
-sw.js                          # عامل الخدمة — العمل دون إنترنت (service worker)
+sw.js                          # عامل الخدمة — العمل دون إنترنت + التحديثات
+version.json                   # هاش البناء (للتحقّق من التحديثات)
+build.mjs                      # حقن هاش git وبناء ./dist
 css/
+  fonts.css                    # @font-face لخطّ Amiri المُستضاف محلياً
   styles.css                   # كل التنسيقات
+fonts/                         # ملفات خطّ Amiri (woff2) — للعمل دون إنترنت
 js/
   app.js                       # منطق التطبيق (Vue app) — ES module
   data.js                      # نصوص الأدعية (export const DATA)
@@ -40,6 +44,37 @@ browser (and the service worker) cache each piece independently, so repeat visit
 - **Service worker (`sw.js`)** يخزّن غلاف التطبيق ويخدمه من الذاكرة المؤقتة أولاً — فتحٌ فوري وعملٌ دون إنترنت.
 - **وحدات منفصلة** قابلة للتخزين المؤقت لكلٍّ منها على حدة (Vue الكبيرة ونصوص الأدعية لا تُعاد تنزيلها).
 - الأنماط (CSS) في ملف منفصل قابل للتخزين المؤقت.
+
+## يعمل دون إنترنت 100% / Fully offline
+
+- خطّ **Amiri** مُستضاف محلياً في `fonts/` (لا اتصال بـ Google Fonts) — لا توجد أي طلبات خارجية إطلاقاً.
+- عامل الخدمة يخزّن كل ملفات التطبيق مسبقاً، فيعمل التطبيق كاملاً بلا شبكة بعد أوّل فتح.
+
+The Amiri font is self-hosted under `fonts/`, so the app makes **zero external network
+requests** — verified offline (load the page, disconnect, reload: it still renders fully).
+
+## التحديثات وكسر التخزين المؤقت / Updates & cache-busting
+
+- يُحقَن **هاش git** للبناء كـ `?v=<hash>` على كل عناوين JS/CSS، ويُدمج في اسم مخزن عامل الخدمة.
+  أيّ نشرٍ جديد يحمل هاشاً مختلفاً، فلا يَخدم المتصفّح أبداً نسخةً قديمة.
+- زرّ **«↻ تحقّق من التحديثات»** في الإعدادات يسأل الخادم عن إصدارٍ أحدث؛ وعند توفّره يظهر
+  زرّ **«🔄 تحديثٌ متوفّر»** الذي يُفعّل عامل الخدمة الجديد ويُعيد التحميل.
+
+A 12-char git hash is injected as `?v=<hash>` on every JS/CSS URL and baked into the
+service-worker cache name, so a new commit never serves stale client code. The in-app
+**"check for updates"** button calls `registration.update()` and compares `version.json`;
+when a newer build exists, an **"update now"** button activates the waiting worker
+(`SKIP_WAITING`) and reloads.
+
+## البناء / Build
+
+`node build.mjs` ينسخ الموقع إلى `./dist` ويستبدل الرمز `__BUILD_HASH__` بهاش git الحالي،
+ويكتب `version.json`. شغّل البناء ثم قدّم مجلّد `dist`. (يُشغّل سير عمل GitHub Pages هذا تلقائياً.)
+
+`node build.mjs` copies the site into `./dist`, replaces the `__BUILD_HASH__` token with the
+current git hash, and writes `version.json`. The Pages workflow runs this automatically and
+publishes `./dist`. During local dev (without building) the token stays literal and the app
+still works — it just skips real cache-busting.
 
 ## التثبيت / Install
 

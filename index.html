@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>دعاء الميت ومناسك العمرة — الإصدار 1.1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14532d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="دعاء وعمرة">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+<div id="app">
+  <div class="progress" :class="{show:activeTab==='duaa'}"><i :style="{width: progress+'%'}"></i></div>
+
+  <div class="wiz-ov" v-if="showWizard">
+    <div class="wiz-card">
+      <div class="wiz-icon">{{ wizardSteps[wizardStep].icon }}</div>
+      <div class="wiz-title">{{ wizardSteps[wizardStep].title }}</div>
+      <div class="wiz-body" v-html="wizardSteps[wizardStep].body"></div>
+      <div class="wiz-dots"><i v-for="(s,i) in wizardSteps" :key="i" :class="{on:i===wizardStep}"></i></div>
+      <div class="wiz-nav">
+        <button class="wiz-prev" v-if="wizardStep>0" @click="wizardStep--">السابق</button>
+        <button class="wiz-next" @click="nextStep()">{{ wizardStep===wizardSteps.length-1 ? 'ابدأ ✓' : 'التالي' }}</button>
+      </div>
+      <button class="wiz-skip" v-if="wizardStep<wizardSteps.length-1" @click="finishWizard()">تخطّي الشرح</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="gear" v-show="activeTab==='duaa'" @click="showSettings=!showSettings">⚙</button>
+    <button class="tab" :class="{active:activeTab==='duaa'}" @click="showTab('duaa')">الدعاء</button>
+    <button class="tab" :class="{active:activeTab==='tawaf'}" @click="showTab('tawaf')">الطواف</button>
+    <button class="tab" :class="{active:activeTab==='saee'}" @click="showTab('saee')">السعي</button>
+    <button class="tab" :class="{active:activeTab==='adia'}" @click="showTab('adia')">أدعية</button>
+    <button class="tab" :class="{active:activeTab==='tasbih'}" @click="showTab('tasbih')">تسبيح</button>
+    <button class="tab" :class="{active:activeTab==='rights'}" @click="showTab('rights')">حقوق</button>
+  </div>
+
+  <div class="settings-overlay" v-show="showSettings" @click="showSettings=false"></div>
+  <div class="settings" :class="{show:showSettings}">
+    <div class="row s-head"><span class="s-title">الإعدادات</span>
+      <button class="close-btn" @click="showSettings=false" aria-label="إغلاق">✕</button>
+    </div>
+    <div class="row"><span>صيغة الدعاء</span>
+      <div class="seg">
+        <button :class="{active:gender==='m'}" @click="setGender('m')">مذكّر</button>
+        <button :class="{active:gender==='f'}" @click="setGender('f')">مؤنّث</button>
+        <button :class="{active:gender==='p'}" @click="setGender('p')">جمع</button>
+      </div>
+    </div>
+    <div class="row" v-show="gender!=='p'"><span>اسم المتوفّى</span>
+      <input type="text" v-model="name" placeholder="اختياري — مثال: عبد الله">
+    </div>
+    <div class="row" v-show="gender!=='p'"><span>اسم الأب</span>
+      <input type="text" v-model="father" placeholder="اختياري — يظهر: فلان بن فلان">
+    </div>
+    <div class="people" v-show="gender!=='p'">
+      <span v-for="(p,i) in people" class="person-chip" @click="loadPerson(i)">{{ p.name }}<span class="del" @click.stop="delPerson(i)">✕</span></span>
+    </div>
+    <div class="btn-row">
+      <button class="btn-save" v-show="gender!=='p'" @click="savePerson()">＋ حفظ المتوفّى</button>
+      <button class="btn-print" @click="doPrint()">🖨 طباعة / PDF</button>
+    </div>
+    <button class="btn-install" v-show="canInstall" @click="doInstall()">📲 تثبيت التطبيق على الجهاز</button>
+    <hr style="border:none;border-top:1px solid #eef2ec;margin:14px 0">
+    <div class="toggle-row"><span>الوضع الليلي</span>
+      <label class="switch"><input type="checkbox" v-model="dark"><span></span></label>
+    </div>
+    <div class="toggle-row"><span>إبقاء الشاشة مضاءة</span>
+      <label class="switch"><input type="checkbox" v-model="wake" :disabled="!wakeSupported"><span></span></label>
+    </div>
+    <div class="row" style="flex-direction:column;align-items:stretch;gap:8px">
+      <span>سرعة التشغيل التلقائي</span>
+      <div class="speed-row">
+        <button :class="{active:speed===5}" @click="speed=5">سريع</button>
+        <button :class="{active:speed===9}" @click="speed=9">متوسط</button>
+        <button :class="{active:speed===15}" @click="speed=15">بطيء</button>
+      </div>
+    </div>
+    <hr style="border:none;border-top:1px solid #eef2ec;margin:14px 0">
+    <div class="row" style="flex-direction:column;align-items:stretch;gap:6px">
+      <span>تصنيفات إضافية (تُضاف بعد الدعاء الأساسي)</span>
+      <div class="cat-list">
+        <label v-for="c in catList" :key="c.key" class="cat-row">
+          <span class="cr-label">{{ c.title }} <span class="cr-badge" :style="c.badge==='مأثور'?'background:#14532d':'background:#a9711f'">{{ c.badge }}</span></span>
+          <input type="checkbox" :value="c.key" v-model="selectedCats">
+        </label>
+      </div>
+      <div class="cat-total">إجمالي الشرائح: {{ ar(slides.length) }}</div>
+    </div>
+    <button class="wiz-help-btn" @click="openWizard()">؟ شرح التطبيق</button>
+    <p class="hint">إن تُرك الاسم فارغاً يُكتفى بالضمير (له/لها). الطباعة تُخرج الدعاء كاملاً باسم المتوفّى لمشاركته.</p>
+  </div>
+
+  <!-- شريط الأدوات السفلي (تبويب الدعاء) -->
+  <div class="toolbar" :class="{show:activeTab==='duaa' && !showSettings}">
+    <button @click="showIndex=true" title="الفهرس">📑</button>
+    <button @click="togglePlay()" :title="playing?'إيقاف':'تشغيل تلقائي'">{{ playing ? '⏸' : '▶' }}</button>
+    <span class="sep"></span>
+    <button @click="changeScale(-0.1)">−</button>
+    <span class="pct">{{ Math.round(scale*100) }}%</span>
+    <button @click="changeScale(0.1)">+</button>
+    <span class="sep"></span>
+    <button @click="toggleFS()" title="ملء الشاشة">⤢</button>
+  </div>
+
+  <!-- الفهرس -->
+  <div class="index-ov" :class="{show:showIndex}" @click="showIndex=false">
+    <div class="index-panel" @click.stop>
+      <h3>الفهرس <button class="close-btn" @click="showIndex=false">✕</button></h3>
+      <button v-for="(s,i) in slides" :key="i" class="index-item" @click="jumpTo(i)"><b>{{ s.num }}.</b> {{ snippet(s.inner) }}</button>
+    </div>
+  </div>
+
+  <div class="page" :class="{active:activeTab==='duaa'}" id="tab-duaa" ref="duaa" @scroll="onScrollDuaa">
+    <section v-for="(s,i) in slides" :key="i" class="slide" :class="s.cls">
+      <div class="num">{{ s.num }} / {{ s.total }}</div>
+      <div class="inner" v-html="s.inner"></div>
+    </section>
+  </div>
+
+  <div class="page" :class="{active:activeTab==='tawaf'}" id="tab-tawaf" ref="tawaf" @scroll="onScrollTab">
+    <div class="hajj-wrap">
+      
+        <div class="counter-card ">
+          <div class="c-head">عَدّاد الطَّواف <span>(٧ أشواط)</span></div>
+          <div class="dots"><div v-for="i in 7" class="dot" :class="{on: i<=C.tawaf.count}"></div></div>
+          <div class="count-big"><span>{{ ar(C.tawaf.count) }}</span> <small>/ ٧</small></div>
+          <div class="timer-row">
+            <div class="t-box"><span class="t-label">منذ البداية</span><span class="t-val">{{ fmt(elapsed('tawaf')) }}</span></div>
+            <div class="t-box"><span class="t-label">الشوط الحالي</span><span class="t-val">{{ fmt(curLap('tawaf')) }}</span></div>
+          </div>
+          <button class="big-add" @click="inc('tawaf')">+ شوط</button>
+          <div class="small-btns">
+            <button @click="toggleTimer('tawaf')">{{ C.tawaf.running ? '⏸ إيقاف' : '▶ استئناف' }}</button>
+            <button @click="dec('tawaf')">− تراجع</button>
+            <button @click="resetC('tawaf')">↺ تصفير</button>
+          </div>
+          <div class="laps"><span v-for="(x,i) in C.tawaf.laps" class="lap-chip">شوط {{ ar(i+1) }}: <b>{{ fmt(x) }}</b></span></div>
+          <div class="done-msg" :class="{show: C.tawaf.count>=7}">🤲 أَتْمَمْتَ الأَشْوَاطَ السَّبْعَةَ، تَقَبَّلَ اللهُ</div>
+        </div>
+      <div class="dua-block">
+        <h3>دعاء البداية وأدعية الطواف المستحبّة</h3>
+        <p><b>عند محاذاة الحجر الأسود (بداية كل شوط):</b><br>تستلمه أو تشير إليه وتقول: <span class="g">«بِسْمِ اللهِ، اللهُ أَكْبَرُ»</span> (أو: اللهُ أَكْبَرُ).</p>
+        <p><b>بين الركن اليماني والحجر الأسود (في كل شوط):</b><br><span class="ayah">«رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ»</span></p>
+        <p><b>عند استلام الركن اليماني:</b><br><span class="g">«بِسْمِ اللهِ وَاللهُ أَكْبَرُ»</span></p>
+        <p class="note">لا يوجد دعاء واجب محدّد في الطواف، ويُستحبّ الإكثار من الذكر والدعاء بما تحبّ.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" :class="{active:activeTab==='saee'}" id="tab-saee" ref="saee" @scroll="onScrollTab">
+    <div class="hajj-wrap">
+      
+        <div class="counter-card saee">
+          <div class="c-head">عَدّاد السَّعي <span>(٧ أشواط)</span></div>
+          <div class="dots"><div v-for="i in 7" class="dot" :class="{on: i<=C.saee.count}"></div></div>
+          <div class="count-big"><span>{{ ar(C.saee.count) }}</span> <small>/ ٧</small></div>
+          <div class="timer-row">
+            <div class="t-box"><span class="t-label">منذ البداية</span><span class="t-val">{{ fmt(elapsed('saee')) }}</span></div>
+            <div class="t-box"><span class="t-label">الشوط الحالي</span><span class="t-val">{{ fmt(curLap('saee')) }}</span></div>
+          </div>
+          <button class="big-add" @click="inc('saee')">+ شوط</button>
+          <div class="small-btns">
+            <button @click="toggleTimer('saee')">{{ C.saee.running ? '⏸ إيقاف' : '▶ استئناف' }}</button>
+            <button @click="dec('saee')">− تراجع</button>
+            <button @click="resetC('saee')">↺ تصفير</button>
+          </div>
+          <div class="laps"><span v-for="(x,i) in C.saee.laps" class="lap-chip">شوط {{ ar(i+1) }}: <b>{{ fmt(x) }}</b></span></div>
+          <div class="done-msg" :class="{show: C.saee.count>=7}">🤲 أَتْمَمْتَ الأَشْوَاطَ السَّبْعَةَ، تَقَبَّلَ اللهُ</div>
+        </div>
+      <div class="dua-block saee-block">
+        <h3>دعاء البداية وأدعية السعي المستحبّة</h3>
+        <p><b>عند الاقتراب من الصفا (في البداية مرّة واحدة):</b><br><span class="ayah">«إِنَّ الصَّفَا وَالْمَرْوَةَ مِنْ شَعَائِرِ اللهِ»</span><br>ثم تقول: <span class="g">«أَبْدَأُ بِمَا بَدَأَ اللهُ بِهِ»</span></p>
+        <p><b>على الصفا والمروة:</b> مستقبلاً القبلة، رافعاً يديك، تُكرّر الذكر ثلاثاً وتدعو بين كل مرّة:<br><span class="g">«اللهُ أَكْبَرُ، اللهُ أَكْبَرُ، اللهُ أَكْبَرُ، لَا إِلَهَ إِلَّا اللهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ، وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ، لَا إِلَهَ إِلَّا اللهُ وَحْدَهُ، أَنْجَزَ وَعْدَهُ، وَنَصَرَ عَبْدَهُ، وَهَزَمَ الْأَحْزَابَ وَحْدَهُ»</span></p>
+        <p><b>بين الصفا والمروة:</b><br><span class="g">«رَبِّ اغْفِرْ وَارْحَمْ، وَأَنْتَ الْأَعَزُّ الْأَكْرَمُ»</span></p>
+        <p class="note">يُستحبّ الإكثار من الذكر والدعاء أثناء السعي بما تحبّ.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" :class="{active:activeTab==='adia'}" id="tab-adia" ref="adia" @scroll="onScrollTab">
+    <div class="hajj-wrap">
+      <div class="dua-block">
+        <h3>التَّلبية</h3>
+        <p><span class="g">«لَبَّيْكَ اللَّهُمَّ لَبَّيْكَ، لَبَّيْكَ لَا شَرِيكَ لَكَ لَبَّيْكَ، إِنَّ الْحَمْدَ وَالنِّعْمَةَ لَكَ وَالْمُلْكَ، لَا شَرِيكَ لَكَ»</span></p>
+        <p class="note">يُلبّي المُحرِم ويرفع صوته بها (الرجل)، ويُكثر منها من حين الإحرام.</p>
+      </div>
+      <div class="dua-block">
+        <h3>دعاء دخول المسجد الحرام</h3>
+        <p>تُقدّم رجلك اليمنى وتقول: <span class="g">«أَعُوذُ بِاللهِ الْعَظِيمِ، وَبِوَجْهِهِ الْكَرِيمِ، وَسُلْطَانِهِ الْقَدِيمِ، مِنَ الشَّيْطَانِ الرَّجِيمِ، بِسْمِ اللهِ، وَالصَّلَاةُ وَالسَّلَامُ عَلَى رَسُولِ اللهِ، اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ»</span></p>
+      </div>
+      <div class="dua-block">
+        <h3>عند رؤية الكعبة</h3>
+        <p>تَرفع يديك وتدعو بما أحببت؛ فهو موطن إجابة.</p>
+        <p class="note">لم يثبت دعاء مخصّص عند رؤية الكعبة، وما يُتداول من ألفاظ معيّنة لم يصحّ، والأصل الدعاء بما تيسّر من خيري الدنيا والآخرة.</p>
+      </div>
+      <div class="dua-block">
+        <h3>دعاء شرب ماء زمزم</h3>
+        <p>تستقبل القبلة وتتنفّس ثلاثاً وتتضلّع منه وتقول: <span class="g">«اللَّهُمَّ إِنِّي أَسْأَلُكَ عِلْماً نَافِعاً، وَرِزْقاً وَاسِعاً، وَشِفَاءً مِنْ كُلِّ دَاءٍ»</span></p>
+        <p class="note">قال ﷺ: «مَاءُ زَمْزَمَ لِمَا شُرِبَ لَهُ»، فانوِ ما تحبّ من خير.</p>
+      </div>
+      <div class="dua-block">
+        <h3>عند المُلتَزَم (بين الركن والباب)</h3>
+        <p>تلتصق به وتدعو بما أحببت من خيري الدنيا والآخرة.</p>
+        <p class="note">لم يَرِد فيه دعاء مخصّص، والدعاء فيه بما تيسّر.</p>
+      </div>
+    </div></div>
+  <div class="page" :class="{active:activeTab==='tasbih'}" id="tab-tasbih" ref="tasbih" @scroll="onScrollTab">
+    <div class="hajj-wrap">
+      <div class="tasbih-card">
+        <div class="tasbih-zikr">{{ zikr.text }}</div>
+        <div class="tasbih-big">{{ ar(tasbih.count) }}<span style="font-size:.32em;opacity:.8"> / {{ zikr.target>0 ? ar(zikr.target) : '∞' }}</span></div>
+        <div style="font-size:1rem;opacity:.85">الدورات المكتملة: {{ ar(tasbih.rounds) }}</div>
+        <button class="tasbih-tap" @click="tap()">سبِّح</button>
+        <div class="small-btns" style="margin-top:10px">
+          <button @click="resetTasbih()">↺ تصفير</button>
+        </div>
+        <div class="zikr-pick">
+          <button v-for="(z,i) in azkar" :class="{active:zikrIdx===i}" @click="pickZikr(i)">{{ z.short }}</button>
+        </div>
+      </div>
+      <div class="dua-block">
+        <h3>أذكار بعد الصلاة</h3>
+        <p>سُبْحَانَ اللهِ (٣٣)، الْحَمْدُ لِلَّهِ (٣٣)، اللهُ أَكْبَرُ (٣٣)، وتمام المئة: <span class="g">«لَا إِلَهَ إِلَّا اللهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ، وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ»</span></p>
+        <p class="note">اختر الذكر من الأزرار أعلاه، واضغط «سبِّح» للعدّ. يهتزّ الجهاز عند بلوغ الهدف.</p>
+      </div>
+    </div></div>
+
+  <div class="page" :class="{active:activeTab==='rights'}" id="tab-rights" ref="rights" @scroll="onScrollTab">
+    <div class="hajj-wrap">
+      <div class="counter-card" style="background:linear-gradient(160deg,#14532d,#1c6e3c)">
+        <div class="c-head">حقوق النشر</div>
+        <div style="font-size:1.5rem;font-weight:800;margin:14px 0 8px;font-family:'Amiri',serif">وقفٌ لكل مسلم</div>
+        <div style="font-size:1.05rem;opacity:.94;line-height:1.95">هذا العمل صدقةٌ جارية، يجوز نشره ومشاركته مجاناً دون مقابل. نسألكم الدعاء لموتى المسلمين.</div>
+      </div>
+      <div class="dua-block">
+        <h3>عن العمل</h3>
+        <p><b>الدعاء:</b> صهيب الرشيد</p>
+        <p><b>البرمجة:</b> محمد الرشيد</p>
+        <p><b>للتواصل:</b> <a href="mailto:osman.elrashid@gmail.com">osman.elrashid@gmail.com</a></p>
+        <p class="note">الإصدار {{ version }} — يعمل دون إنترنت. قال ﷺ: «إِذَا مَاتَ الإِنْسَانُ انْقَطَعَ عَمَلُهُ إِلَّا مِنْ ثَلَاثٍ: صَدَقَةٍ جَارِيَةٍ، أَوْ عِلْمٍ يُنْتَفَعُ بِهِ، أَوْ وَلَدٍ صَالِحٍ يَدْعُو لَهُ».</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- منطقة الطباعة -->
+  <div id="print">
+    <div class="p-title">{{ printTitle }}</div>
+    <div class="p-bism">بِسْمِ اللهِ الرَّحْمَنِ الرَّحِيمِ</div>
+    <div class="p-dua" v-for="(h,i) in printItems" :key="i" v-html="h"></div>
+    <div class="p-foot">اللهم تقبّل واغفر لموتانا وموتى المسلمين</div>
+  </div>
+</div>
+<script src="js/vendor/vue.global.prod.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

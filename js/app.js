@@ -1,5 +1,6 @@
 import { DATA } from './data.js?v=__BUILD_HASH__';
 import { CATS } from './cats.js?v=__BUILD_HASH__';
+import { SELFDUA } from './selfdua.js?v=__BUILD_HASH__';
 
 // Build identifier — replaced with the git hash at deploy time (see build.mjs).
 const BUILD_HASH = '__BUILD_HASH__';
@@ -10,19 +11,20 @@ const { createApp } = Vue;
 createApp({
   data(){ return {
     gender:'m', name:'', father:'', scale:1, activeTab:'duaa', now:Date.now(),
+    duaaMode:'mayyit', // 'mayyit' = الدعاء للميت | 'self' = الدعاء لنفسك
     duaaIndex:0, showSettings:false, showIndex:false,
     dark:false, wake:false, wakeSupported:('wakeLock' in navigator),
     playing:false, speed:9, playTimer:null, version:'1.1',
     canInstall:false,
     buildHash:BUILD_HASH, updateReady:false, checkingUpdate:false, upToDate:false, offlineReady:false,
     selectedCats:[],
-    catList:[{key:'child',title:'الطفل / الصغير',badge:'مأثور'},{key:'parents',title:'الوالدان',badge:'مأثور'},{key:'ill',title:'مريض / مبتلى (السرطان)',badge:'دعاء عام'},{key:'martyr',title:'الشهيد (الأصناف الخمسة)',badge:'دعاء عام'},{key:'self',title:'لنفسك (طواف/سعي)',badge:'مأثور'}],
+    catList:[{key:'child',title:'الطفل / الصغير',badge:'مأثور'},{key:'parents',title:'الوالدان',badge:'مأثور'},{key:'ill',title:'مريض / مبتلى (السرطان)',badge:'دعاء عام'},{key:'martyr',title:'الشهيد (الأصناف الخمسة)',badge:'دعاء عام'}],
     showWizard:false, wizardStep:0,
     wizardSteps:[
-      {icon:'🤲',title:'أهلاً بك',body:'تطبيق دعاء الميت ومناسك العمرة. كل شيء يعمل دون إنترنت ويُحفظ تلقائياً. هذه جولة سريعة (١١ خطوة).'},
+      {icon:'🤲',title:'أهلاً بك',body:'تطبيقٌ لأدعية العمرة: تدعو به <b>للميّت</b> أو <b>لِنَفْسك</b>، مع مناسك الطواف والسعي والأذكار. كل شيء يعمل دون إنترنت ويُحفظ تلقائياً. هذه جولة سريعة.'},
       {icon:'📖',title:'تبويب الدعاء',body:'كل دعاء في شريحة مستقلّة. مرِّر لأعلى/أسفل للتنقّل، أو استخدم أسهم لوحة المفاتيح ومفتاح المسافة على الحاسوب.'},
-      {icon:'⚙️',title:'الإعدادات',body:'من الزرّ ⚙ أعلى اليسار: بدِّل الصيغة (مذكّر / مؤنّث / جمع)، وأدخل اسم المتوفّى واسم الأب، وفعِّل الوضع الليلي، واضبط سرعة التشغيل التلقائي.'},
-      {icon:'🏷️',title:'تصنيفات الأدعية',body:'من الإعدادات أضِف أدعية حسب حال المتوفّى (طفل، والدان، مريض، شهيد، أو الدعاء لنفسك)؛ تُلحق بعد الدعاء الأساسي مع وسمها (مأثور / دعاء عام)، ويظهر «إجمالي الشرائح».'},
+      {icon:'⚙️',title:'الإعدادات',body:'من الزرّ ⚙ أعلى اليسار: اختر <b>«لِمَن تدعو؟»</b> (للميّت / لِنَفْسي)، وفي وضع الميّت بدِّل الصيغة (مذكّر/مؤنّث/جمع) وأدخل اسم المتوفّى، وفعِّل الوضع الليلي، واضبط سرعة التشغيل التلقائي.'},
+      {icon:'🏷️',title:'محاور وتصنيفات الأدعية',body:'في وضع <b>«للميّت»</b> أضِف من الإعدادات أدعيةً حسب حاله (طفل، والدان، مريض، شهيد) تُلحق بعد الدعاء الأساسي. وفي وضع <b>«لِنَفْسي»</b> تجد سبعة محاور جامعة (الثبات، اليقين، المحبة، المغفرة، الرزق، الوالدان، القبول). وكلٌّ موسومٌ (مأثور / دعاء عام).'},
       {icon:'🛠️',title:'شريط الأدوات',body:'أسفل تبويب الدعاء: 📑 الفهرس للقفز إلى أي دعاء، و▶ التشغيل التلقائي، و − / + لتكبير وتصغير الخط، و ⤢ لملء الشاشة.'},
       {icon:'🕋',title:'الطواف والسعي',body:'عدّاد لكلٍّ منهما (٧ أشواط) مع مؤقّت يحسب الوقت الكلّي وزمن كل شوط، إضافةً إلى دعاء البداية والأدعية المستحبّة.'},
       {icon:'📿',title:'أدعية وتسبيح',body:'تبويب «أدعية» فيه التلبية ودخول المسجد الحرام وماء زمزم وغيرها. وتبويب «تسبيح» عدّاد أذكار مع أهداف (٣٣ / ١٠٠).'},
@@ -46,23 +48,27 @@ createApp({
   computed:{
     fullName(){ if(this.gender==='p') return ''; const n=this.name.trim(); if(!n) return ''; const f=this.father.trim();
       if(!f) return n; return n+(this.gender==='m'?' بن ':' بنت ')+f; },
-    slides(){ const base=DATA[this.gender], out=[];
-      for(let i=0;i<base.length;i++){ const it=base[i];
-        const inner=it.id==='title'?this.titleHTML():this.injectName(it.html,it.id);
-        out.push({cls:it.cls||it.c,inner}); }
-      for(const key of this.selectedCats){ const cat=CATS[key]; if(!cat) continue;
-        out.push({cls:'catsep', inner:'<div class="cat-head"><div class="cat-badge '+(cat.badge==='مأثور'?'b-auth':'b-gen')+'">'+cat.badge+'</div><div class="cat-title">'+cat.title+'</div><div class="cat-note">'+cat.note+'</div></div>'});
-        const items=cat.byGender ? (cat.items[this.gender]||cat.items.m) : cat.items;
-        for(const h of items){ if(h&&typeof h==='object'&&h.sub){ out.push({cls:'catsub', inner:'<div class="cat-sub">'+h.sub+'</div>'}); continue; } const L=h.replace(/<[^>]+>/g,'').length; const cl=L<160?'s-lg':(L<300?'s-md':'s-sm'); out.push({cls:cl, inner:'<div class="dua">'+h+'</div>'}); } }
+    slides(){ const out=[];
+      if(this.duaaMode==='self'){
+        out.push({cls:'title', inner:this.selfTitleHTML()});
+        this.buildCatSlides(SELFDUA, out);
+      } else {
+        const base=DATA[this.gender];
+        for(let i=0;i<base.length;i++){ const it=base[i];
+          const inner=it.id==='title'?this.titleHTML():this.injectName(it.html,it.id);
+          out.push({cls:it.cls||it.c,inner}); }
+        this.buildCatSlides(this.selectedCats.map(k=>CATS[k]).filter(Boolean), out);
+      }
       const n=out.length; return out.map((s,i)=>({cls:s.cls,inner:s.inner,num:i+1,total:n})); },
     progress(){ const n=this.slides.length||1; return Math.min(100,Math.round((this.duaaIndex+1)/n*100)); },
-    printTitle(){ if(this.gender==='p') return 'دُعَاءٌ لِلْأَمْوَاتِ'; const fn=this.fullName; if(fn) return 'دُعَاءٌ لِـ'+(this.gender==='m'?'الْمَرْحُومِ':'الْمَرْحُومَةِ')+' '+fn;
+    printTitle(){ if(this.duaaMode==='self') return 'دُعَاءٌ لِنَفْسِي'; if(this.gender==='p') return 'دُعَاءٌ لِلْأَمْوَاتِ'; const fn=this.fullName; if(fn) return 'دُعَاءٌ لِـ'+(this.gender==='m'?'الْمَرْحُومِ':'الْمَرْحُومَةِ')+' '+fn;
       return this.gender==='m'?'دُعَاءُ الْمَيِّتِ':'دُعَاءُ الْمَيِّتَةِ'; },
     printItems(){ return this.slides.slice(1).map(s=>s.inner); },
     zikr(){ return this.azkar[this.zikrIdx]; },
     shortHash(){ const h=this.buildHash||''; return (h && h!=='__BUILD'+'_HASH__') ? h.slice(0,7) : 'dev'; }
   },
   watch:{
+    duaaMode(v){ this.persist('duaaMode',v); this.duaaIndex=0; this.keepSlide(); },
     gender(v){ this.persist('duaaGender',v); this.keepSlide(); },
     name(){ this.persist('duaaName',this.name); this.keepSlide(); },
     father(){ this.persist('duaaFather',this.father); this.keepSlide(); },
@@ -104,6 +110,15 @@ createApp({
     changeScale(d){ this.scale=Math.min(2.5,Math.max(0.5,Math.round((this.scale+d)*10)/10)); },
     setScale(v){ this.scale=v; },
     setGender(g){ this.gender=g; },
+    setDuaaMode(m){ this.duaaMode=m; },
+    // باني شرائح التصنيفات — مشترك بين دعاء الميت (CATS) ودعاء النفس (SELFDUA).
+    buildCatSlides(list, out){
+      for(const cat of list){ if(!cat) continue;
+        out.push({cls:'catsep', inner:'<div class="cat-head"><div class="cat-badge '+(cat.badge==='مأثور'?'b-auth':'b-gen')+'">'+cat.badge+'</div><div class="cat-title">'+cat.title+'</div><div class="cat-note">'+cat.note+'</div></div>'});
+        const items=cat.byGender ? (cat.items[this.gender]||cat.items.m) : cat.items;
+        for(const h of items){ if(h&&typeof h==='object'&&h.sub){ out.push({cls:'catsub', inner:'<div class="cat-sub">'+h.sub+'</div>'}); continue; } const L=h.replace(/<[^>]+>/g,'').length; const cl=L<160?'s-lg':(L<300?'s-md':'s-sm'); out.push({cls:cl, inner:'<div class="dua">'+h+'</div>'}); } }
+    },
+    selfTitleHTML(){ return '<div class="big-title">دُعَاءٌ لِنَفْسِي</div><div class="sub">أَدْعِيَةٌ جَامِعَةٌ تَدْعُو بِهَا لِنَفْسِكَ<br>أَثْنَاءَ الطَّوَافِ وَالسَّعْيِ وَفِي كُلِّ حِينٍ</div>'; },
     nextStep(){ if(this.wizardStep < this.wizardSteps.length-1) this.wizardStep++; else this.finishWizard(); },
     finishWizard(){ this.showWizard=false; try{ localStorage.setItem('tutorialDone','1'); }catch(e){} },
     openWizard(){ this.wizardStep=0; this.showSettings=false; this.showWizard=true; },
@@ -177,6 +192,7 @@ createApp({
       const ts=JSON.parse(localStorage.getItem('tasbih')||'null'); if(ts)this.tasbih=ts;
       const zi=localStorage.getItem('zikrIdx'); if(zi)this.zikrIdx=parseInt(zi);
       const scats=JSON.parse(localStorage.getItem('selectedCats')||'[]'); if(Array.isArray(scats))this.selectedCats=scats;
+      const dm=localStorage.getItem('duaaMode'); if(dm==='self'||dm==='mayyit')this.duaaMode=dm;
     }catch(e){} },
   },
   mounted(){

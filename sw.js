@@ -17,6 +17,7 @@ const ASSETS = [
   './js/vendor/vue.global.prod.js' + V,
   './js/data.js' + V,
   './js/cats.js' + V,
+  './js/selfdua.js' + V,
   './js/app.js' + V,
   // Fonts and icons are referenced without a version query.
   './fonts/amiri-arabic-400.woff2',

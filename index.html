@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>دعاء الميت ومناسك العمرة — الإصدار 1.1</title>
+<title>أدعية العمرة — للميّت ولِنَفْسك — الإصدار 1.1</title>
 <link rel="stylesheet" href="css/fonts.css?v=__BUILD_HASH__">
 <link rel="stylesheet" href="css/styles.css?v=__BUILD_HASH__">
 <link rel="manifest" href="manifest.webmanifest?v=__BUILD_HASH__">
@@ -47,24 +47,30 @@
     <div class="row s-head"><span class="s-title">الإعدادات</span>
       <button class="close-btn" @click="showSettings=false" aria-label="إغلاق">✕</button>
     </div>
-    <div class="row"><span>صيغة الدعاء</span>
+    <div class="row"><span>لِمَن تدعو؟</span>
+      <div class="seg">
+        <button :class="{active:duaaMode==='mayyit'}" @click="setDuaaMode('mayyit')">للميّت</button>
+        <button :class="{active:duaaMode==='self'}" @click="setDuaaMode('self')">لِنَفْسي</button>
+      </div>
+    </div>
+    <div class="row" v-show="duaaMode==='mayyit'"><span>صيغة الدعاء</span>
       <div class="seg">
         <button :class="{active:gender==='m'}" @click="setGender('m')">مذكّر</button>
         <button :class="{active:gender==='f'}" @click="setGender('f')">مؤنّث</button>
         <button :class="{active:gender==='p'}" @click="setGender('p')">جمع</button>
       </div>
     </div>
-    <div class="row" v-show="gender!=='p'"><span>اسم المتوفّى</span>
+    <div class="row" v-show="duaaMode==='mayyit' && gender!=='p'"><span>اسم المتوفّى</span>
       <input type="text" v-model="name" placeholder="اختياري — مثال: عبد الله">
     </div>
-    <div class="row" v-show="gender!=='p'"><span>اسم الأب</span>
+    <div class="row" v-show="duaaMode==='mayyit' && gender!=='p'"><span>اسم الأب</span>
       <input type="text" v-model="father" placeholder="اختياري — يظهر: فلان بن فلان">
     </div>
-    <div class="people" v-show="gender!=='p'">
+    <div class="people" v-show="duaaMode==='mayyit' && gender!=='p'">
       <span v-for="(p,i) in people" class="person-chip" @click="loadPerson(i)">{{ p.name }}<span class="del" @click.stop="delPerson(i)">✕</span></span>
     </div>
     <div class="btn-row">
-      <button class="btn-save" v-show="gender!=='p'" @click="savePerson()">＋ حفظ المتوفّى</button>
+      <button class="btn-save" v-show="duaaMode==='mayyit' && gender!=='p'" @click="savePerson()">＋ حفظ المتوفّى</button>
       <button class="btn-print" @click="doPrint()">🖨 طباعة / PDF</button>
     </div>
     <button class="btn-install" v-show="canInstall" @click="doInstall()">📲 تثبيت التطبيق على الجهاز</button>
@@ -85,14 +91,14 @@
     </div>
     <hr style="border:none;border-top:1px solid #eef2ec;margin:14px 0">
     <div class="row" style="flex-direction:column;align-items:stretch;gap:6px">
-      <span>تصنيفات إضافية (تُضاف بعد الدعاء الأساسي)</span>
-      <div class="cat-list">
+      <span v-show="duaaMode==='mayyit'">تصنيفات إضافية (تُضاف بعد الدعاء الأساسي)</span>
+      <div class="cat-list" v-show="duaaMode==='mayyit'">
         <label v-for="c in catList" :key="c.key" class="cat-row">
           <span class="cr-label">{{ c.title }} <span class="cr-badge" :style="c.badge==='مأثور'?'background:#14532d':'background:#a9711f'">{{ c.badge }}</span></span>
           <input type="checkbox" :value="c.key" v-model="selectedCats">
         </label>
       </div>
-      <div class="cat-total">إجمالي الشرائح: {{ ar(slides.length) }}</div>
+      <div class="cat-total">إجمالي الشرائح: {{ ar(slides.length) }} <span v-show="duaaMode==='self'">— دعاءٌ لِنَفْسك</span></div>
     </div>
     <button class="wiz-help-btn" @click="openWizard()">؟ شرح التطبيق</button>
     <hr style="border:none;border-top:1px solid #eef2ec;margin:14px 0">
@@ -267,7 +273,7 @@
     <div class="p-title">{{ printTitle }}</div>
     <div class="p-bism">بِسْمِ اللهِ الرَّحْمَنِ الرَّحِيمِ</div>
     <div class="p-dua" v-for="(h,i) in printItems" :key="i" v-html="h"></div>
-    <div class="p-foot">اللهم تقبّل واغفر لموتانا وموتى المسلمين</div>
+    <div class="p-foot">{{ duaaMode==='self' ? 'تقبّل الله منك صالح الأعمال' : 'اللهم تقبّل واغفر لموتانا وموتى المسلمين' }}</div>
   </div>
 </div>
 <script src="js/vendor/vue.global.prod.js?v=__BUILD_HASH__"></script>
